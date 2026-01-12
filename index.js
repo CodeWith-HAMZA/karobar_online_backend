@@ -282,8 +282,8 @@ app.get("/api/v1/business-listings/:id", async (req, res) => {
 // ---- IMPORTANT: Modified for Vercel ----
 // Only start server in development
 if (require.main === module) {
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, async () => {
+    const PORT = process.env.PORT || 3001;
+    app.listen(PORT, '0.0.0.0', async () => {
         try {
             const client = await pool.connect();
             console.log("✅ Connected to Neon PostgreSQL");
