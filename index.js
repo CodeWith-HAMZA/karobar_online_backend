@@ -5,7 +5,7 @@ const { Pool } = require("pg");
 const { getBusinessListings } = require("./controllers/business-listings");
 const { createBusinessListing } = require("./controllers/business-listings");
 
-const app = express();
+const app = express(); 
 app.use(express.json());
 app.use(cors({ origin: true }));
 
