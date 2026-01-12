@@ -5,7 +5,7 @@ const { Pool } = require("pg");
 const { getBusinessListings } = require("./controllers/business-listings");
 const { createBusinessListing } = require("./controllers/business-listings");
 
-const app = express(); 
+const app = express();
 app.use(express.json());
 app.use(cors({ origin: true }));
 
@@ -51,21 +51,40 @@ app.get("/api/v1/business-listings", async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
         const query = req.query.q || "";
+        // console.log(req.query.is_test_data)
+        const is_test_data = req.query.is_test_data === 'true' ? true : false;
+        console.log(is_test_data)
+
+
 
         // in category_id field join
         const countQuery = `SELECT COUNT(*) FROM business_listings`;
+        // const dataQuery = `
+        //     SELECT * FROM business_listings 
+        //     WHERE full_name ILIKE '%${query}%' 
+        //     ORDER BY id DESC 
+        //     LIMIT $1 OFFSET $2
+        // `;
+
         const dataQuery = `
-            SELECT * FROM business_listings 
-            WHERE full_name ILIKE '%${query}%' 
-            ORDER BY id DESC 
-            LIMIT $1 OFFSET $2
-        `;
+    SELECT *
+    FROM business_listings
+    WHERE full_name ILIKE $1
+      AND is_test_data = $2
+    ORDER BY id DESC
+    LIMIT $3 OFFSET $4
+`;
 
         const countResult = await pool.query(countQuery);
         const totalValidation = parseInt(countResult.rows[0].count);
         const totalPages = Math.ceil(totalValidation / limit);
 
-        const { rows } = await pool.query(dataQuery, [limit, offset]);
+        const { rows } = await pool.query(dataQuery, [
+            `%${query}%`,   // $1
+            is_test_data,     // $2 → true or false
+            limit,          // $3
+            offset          // $4
+        ]);
 
         res.status(200).json({
             success: true,
@@ -150,7 +169,8 @@ app.put("/api/v1/business-listings/:id", async (req, res) => {
             package_status,
             business_model,
             message,
-            website_url
+            website_url,
+            ai_status
         } = req.body;
         console.log(package_status)
 
@@ -187,8 +207,9 @@ app.put("/api/v1/business-listings/:id", async (req, res) => {
                 message = COALESCE($16, message),
                 package_status = COALESCE($17, package_status),
                 business_model = COALESCE($18, business_model),
-                website_url = COALESCE($19, website_url)
-            WHERE id = $20
+                website_url = COALESCE($19, website_url),
+                ai_status = COALESCE($20, ai_status)
+            WHERE id = $21
             RETURNING *
         `;
 
@@ -212,6 +233,7 @@ app.put("/api/v1/business-listings/:id", async (req, res) => {
             package_status,
             business_model,
             website_url,
+            ai_status,
             id
         ];
 
