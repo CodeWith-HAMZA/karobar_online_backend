@@ -12,6 +12,7 @@ const upload = multer({
         contentType: multerS3.AUTO_CONTENT_TYPE,
         key: (req, file, cb) => {
             // fetch the business listing id from the request body
+            // console.log(req.file, ' file')
             const businessListingId = req.query.business_listing_id || 1;
             const fileName = `uploads/business-listings/${businessListingId}/${Date.now()}-${file.originalname}`;
 

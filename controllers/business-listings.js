@@ -1,4 +1,5 @@
 const pool = require("../db");
+const { deleteFileFromS3 } = require("../s3/upload");
 
 exports.getBusinessListings = async (req, res) => {
     try {
@@ -175,7 +176,8 @@ exports.updateBusinessListing = async (req, res) => {
             business_model,
             message,
             website_url,
-            ai_status
+            ai_status,
+            logo
         } = req.body;
         console.log(package_status)
 
@@ -188,6 +190,10 @@ exports.updateBusinessListing = async (req, res) => {
                 success: false,
                 message: "Business listing not found"
             });
+        }
+        console.log(checkResult.rows[0].logo, " rows")
+        if (checkResult.rows[0].logo) {
+            await deleteFileFromS3(checkResult.rows[0].logo)
         }
 
         // Update only the fields that are provided
@@ -213,8 +219,9 @@ exports.updateBusinessListing = async (req, res) => {
                 package_status = COALESCE($16, package_status),
                 business_model = COALESCE($17, business_model),
                 website_url = COALESCE($18, website_url),
-                ai_status = COALESCE($19, ai_status)
-            WHERE id = $20
+                ai_status = COALESCE($19, ai_status),
+                logo = COALESCE($20, logo)
+            WHERE id = $21
             RETURNING *
         `;
 
@@ -239,6 +246,7 @@ exports.updateBusinessListing = async (req, res) => {
             business_model,
             website_url,
             ai_status,
+            logo,
             id
         ];
 

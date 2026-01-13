@@ -15,6 +15,7 @@ app.use(cors({ origin: true }));
 
 // ✅ Neon connection pool
 const pool = require("./db");
+const { DeleteObjectsCommand, DeleteObjectCommand, HeadObjectCommand } = require("@aws-sdk/client-s3");
 
 // ---- DB CONNECTION BOOTSTRAP ----
 // async function startServer() {
@@ -130,6 +131,7 @@ app.get("/api/v1/business-listings/:id", async (req, res) => {
 });
 
 app.post("/upload", upload.single("file"), async (req, res) => {
+    console.log(req.file, " req")
     const url = req.file.location;
 
     // update the business listing with the new image url
@@ -146,7 +148,6 @@ app.post("/upload", upload.single("file"), async (req, res) => {
         "SELECT logo FROM business_listings WHERE id=$1",
         [req.query.business_listing_id]
     );
-    console.log(businessListing[0].logo)
 
     if (businessListing[0].logo) {
         const deletePreviousFile = await deleteFileFromS3(businessListing[0].logo);
@@ -166,6 +167,37 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
 
 
+app.get('/test', async (req, res) => {
+
+    try {
+
+        await s3.send(new HeadObjectCommand({ Bucket: process.env.BUCKET_NAME, Key: "https://amzn-s3-karobaronlineai.s3.eu-north-1.amazonaws.com/uploads/business-listings/86/1768309172610-download+(14).png" }));
+        console.log("File exists on S3.");
+    } catch (err) {
+        if (err.name === "NotFound") {
+            console.log("File does NOT exist. Check your Key name!");
+        } else {
+            console.error("Error checking file:", err);
+
+        }
+    }
+    // This is the specific path inside your bucket
+    // const fileKey = "uploads/business-listings/86/1768312897705-download%20%2814%29.png";
+
+    // const params = {
+    //     Bucket: process.env.BUCKET_NAME,
+    //     Key: fileKey,
+    // };
+
+    // try {
+    //     const result = await s3.send(new DeleteObjectCommand(params));
+    //     console.log("Success: File deleted from S3.");
+    //     res.send({ message: "File deleted successfully", result });
+    // } catch (err) {
+    //     console.error("Error deleting file:", err);
+    //     res.status(500).send({ error: "Failed to delete file" });
+    // }
+});
 
 
 
