@@ -52,7 +52,13 @@ app.get("/api/v1/business-listings", async (req, res) => {
         const offset = (page - 1) * limit;
         const query = req.query.q || "";
         // console.log(req.query.is_test_data)
-        const is_test_data = req.query.is_test_data === 'true' ? true : false;
+
+        const is_test_data =
+            req.query.is_test_data === 'true' ? true :
+                req.query.is_test_data === 'false' ? false :
+                    null;
+
+
         console.log(is_test_data)
 
 
@@ -70,7 +76,8 @@ app.get("/api/v1/business-listings", async (req, res) => {
     SELECT *
     FROM business_listings
     WHERE full_name ILIKE $1
-      AND is_test_data = $2
+          AND ( $2 = false OR is_test_data = true )
+
     ORDER BY id DESC
     LIMIT $3 OFFSET $4
 `;
