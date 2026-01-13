@@ -4,6 +4,8 @@ const cors = require('cors')
 const { Pool } = require("pg");
 const { getBusinessListings } = require("./controllers/business-listings");
 const { createBusinessListing } = require("./controllers/business-listings");
+const upload = require("./s3/upload");
+const s3 = require("./s3");
 
 const app = express();
 app.use(express.json());
@@ -62,15 +64,7 @@ app.get("/api/v1/business-listings", async (req, res) => {
         console.log(is_test_data)
 
 
-
-        // in category_id field join
         const countQuery = `SELECT COUNT(*) FROM business_listings`;
-        // const dataQuery = `
-        //     SELECT * FROM business_listings 
-        //     WHERE full_name ILIKE '%${query}%' 
-        //     ORDER BY id DESC 
-        //     LIMIT $1 OFFSET $2
-        // `;
 
         const dataQuery = `
     SELECT *
@@ -303,6 +297,35 @@ app.get("/api/v1/business-listings/:id", async (req, res) => {
         });
     }
 });
+
+app.post("/upload", upload.single("file"), async (req, res) => {
+    // const url = s3.getSignedUrl("getObject", {
+    //     Bucket: "amzn-s3-karobaronlineai",
+    //     Key: "uploads/1768305295208-image.png",
+    // });
+    // console.log("Pre-signed URL:", url);
+    // const listing_id = req.query.listing_id;
+    const url = req.file.location;
+    // update the business listing with the new image url
+    const query = `
+        UPDATE business_listings 
+        SET logo = $1 
+        WHERE id = $2
+        RETURNING *
+    `;
+    console.log(query)
+
+    const values = [url, req.query.business_listing_id];
+
+    const { rows } = await pool.query(query, values);
+
+    res.json({
+        message: "File uploaded successfully",
+        fileUrl: url, // S3 URL
+        data: rows[0]
+    });
+});
+
 
 
 
