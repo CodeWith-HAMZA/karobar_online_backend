@@ -204,19 +204,19 @@ app.put("/api/v1/business-listings/:id", async (req, res) => {
                 has_website = COALESCE($6, has_website),
                 preferred_language = COALESCE($7, preferred_language),
                 business_address = COALESCE($8, business_address),
-                business_about = COALESCE($9, business_about),
-                instagram_social_link = COALESCE($10, instagram_social_link),
-                facebook_social_link = COALESCE($11, facebook_social_link),
-                city = COALESCE($12, city),
-                is_test_data = COALESCE($13, is_test_data),
-                category_id = COALESCE($14, category_id),
-                sub_category_id = COALESCE($15, sub_category_id),
-                message = COALESCE($16, message),
-                package_status = COALESCE($17, package_status),
-                business_model = COALESCE($18, business_model),
-                website_url = COALESCE($19, website_url),
-                ai_status = COALESCE($20, ai_status)
-            WHERE id = $21
+                
+                instagram_social_link = COALESCE($9, instagram_social_link),
+                facebook_social_link = COALESCE($10, facebook_social_link),
+                city = COALESCE($11, city),
+                is_test_data = COALESCE($12, is_test_data),
+                category_id = COALESCE($13, category_id),
+                sub_category_id = COALESCE($14, sub_category_id),
+                message = COALESCE($15, message),
+                package_status = COALESCE($16, package_status),
+                business_model = COALESCE($17, business_model),
+                website_url = COALESCE($18, website_url),
+                ai_status = COALESCE($19, ai_status)
+            WHERE id = $20
             RETURNING *
         `;
 
@@ -229,7 +229,7 @@ app.put("/api/v1/business-listings/:id", async (req, res) => {
             has_website,
             preferred_language,
             business_address,
-            business_about,
+            // business_about,
             instagram_social_link,
             facebook_social_link,
             city,
