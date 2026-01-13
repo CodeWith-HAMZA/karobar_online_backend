@@ -2,6 +2,8 @@
 const multer = require("multer");
 const multerS3 = require("multer-s3");
 const s3 = require("../s3");
+const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { getS3KeyFromUrl } = require("../utils");
 
 const upload = multer({
     storage: multerS3({
@@ -18,4 +20,22 @@ const upload = multer({
     }),
 });
 
-module.exports = upload;
+async function deleteFileFromS3(key) {
+    const s3Key = getS3KeyFromUrl(key)
+    try {
+        await s3.send(
+            new DeleteObjectCommand({
+                Bucket: process.env.BUCKET_NAME,
+                Key: s3Key,
+            })
+        );
+        console.log("Previous file deleted:", s3Key);
+    } catch (err) {
+        console.error("Error deleting previous file:", err);
+    }
+}
+
+module.exports = {
+    upload,
+    deleteFileFromS3
+};
