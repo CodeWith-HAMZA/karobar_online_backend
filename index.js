@@ -5,6 +5,7 @@ const { Pool } = require("pg");
 const { getBusinessListings, updateBusinessListing } = require("./controllers/business-listings");
 const { createBusinessListing } = require("./controllers/business-listings");
 const { upload, deleteFileFromS3 } = require("./s3/upload");
+
 const s3 = require("./s3");
 const { getS3KeyFromUrl } = require("./utils");
 
@@ -15,7 +16,9 @@ app.use(cors({ origin: true }));
 
 // ✅ Neon connection pool
 const pool = require("./db");
-const { DeleteObjectsCommand, DeleteObjectCommand, HeadObjectCommand } = require("@aws-sdk/client-s3");
+const { DeleteObjectsCommand, DeleteObjectCommand, HeadObjectCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
+const multerUpload = require("./multer");
+const sharp = require("sharp");
 
 // ---- DB CONNECTION BOOTSTRAP ----
 // async function startServer() {
@@ -130,9 +133,45 @@ app.get("/api/v1/business-listings/:id", async (req, res) => {
     }
 });
 
-app.post("/upload", upload.single("file"), async (req, res) => {
+app.post("/upload", multerUpload.single("file"), async (req, res) => {
     console.log(req.file, " req")
-    const url = req.file.location;
+    // const url = req.file.location;
+    const originalFileBuffer = req.file.buffer;
+
+    const fileKey = `uploads/business-listings/${req.query.business_listing_id}/${Date.now()}-${req.file.originalname}`;
+    const compressedImageBuffer = await sharp(originalFileBuffer)
+        .resize(400, 400, {
+            fit: sharp.fit.inside,
+            withoutEnlargement: true
+        })
+        .jpeg({ quality: 15 }) // Compress as JPEG with 80% quality
+        .toBuffer();
+
+
+
+
+
+    const params = {
+        Bucket: process.env.BUCKET_NAME,
+        Key: fileKey,
+        Body: compressedImageBuffer,
+        ContentType: 'image/jpeg', // Must match the format you compressed to
+        // ACL: 'public-read' // Optional: Makes the file publicly accessible
+    };
+
+    // Upload to S3
+    const data = await s3.send(new PutObjectCommand(params));
+    console.log('Upload successful:', data.Location);
+    const url = data.Location;
+    console.log(data, 'response data aws ')
+
+    const staticUrl = `https://${process.env.BUCKET_NAME}.s3.${process.env.REGION}.amazonaws.com/${fileKey}`;
+    console.log(staticUrl, 'staticUrl')
+
+
+
+
+
 
     // update the business listing with the new image url
     const query = `
@@ -156,14 +195,17 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
 
 
-    const { rows } = await pool.query(query, [url, req.query.business_listing_id]);
+    const { rows } = await pool.query(query, [staticUrl, req.query.business_listing_id]);
 
     res.json({
         message: "File uploaded successfully",
-        fileUrl: url, // S3 URL
+        fileUrl: staticUrl, // S3 URL
         data: rows[0]
     });
 });
+
+
+
 
 
 
