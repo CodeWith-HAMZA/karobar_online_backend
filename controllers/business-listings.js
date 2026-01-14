@@ -293,14 +293,17 @@ exports.uploadBusinessListingLogo = async (req, res) => {
     console.log(req.file, " req")
     // const url = req.file.location;
     const originalFileBuffer = req.file.buffer;
+    // get extension 
+    const extension = req.file.originalname.split(".").pop();
 
-    const fileKey = `uploads/business-listings/${req.query.business_listing_id}/${Date.now()}-${req.file.originalname}`;
+    // original name replace space with dash
+    const fileKey = `uploads/business-listings/${req.query.business_listing_id}/${Date.now()}-${req.file.originalname} ${extension}`;
     const compressedImageBuffer = await sharp(originalFileBuffer)
         .resize(400, 400, {
-            fit: sharp.fit.inside,
+            width: 350,        // between 250–400
             withoutEnlargement: true
         })
-        .jpeg({ quality: 15 }) // Compress as JPEG with 80% quality
+        .jpeg({ quality: 10 })
         .toBuffer();
 
     const params = {
@@ -312,7 +315,7 @@ exports.uploadBusinessListingLogo = async (req, res) => {
     };
 
     // Upload to S3
-    const data = await s3.send(new PutObjectCommand(params));
+    const data = await s3.send(new PutObjectCommand({ ...params, ACL: 'public-read-write' }));
     console.log('Upload successful:', data.Location);
     const url = data.Location;
     console.log(data, 'response data aws ')
@@ -336,7 +339,7 @@ exports.uploadBusinessListingLogo = async (req, res) => {
     );
 
     if (businessListing[0].logo) {
-        const deletePreviousFile = await deleteFileFromS3(businessListing[0].logo);
+        // const deletePreviousFile = await deleteFileFromS3(businessListing[0].logo);
     }
 
 
