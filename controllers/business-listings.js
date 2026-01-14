@@ -295,9 +295,11 @@ exports.uploadBusinessListingLogo = async (req, res) => {
     const originalFileBuffer = req.file.buffer;
     // get extension 
     const extension = req.file.originalname.split(".").pop();
+    // remove extension
+    const originalName = req.file.originalname.replace(`.${extension}`, "");
 
     // original name replace space with dash
-    const fileKey = `uploads/business-listings/${req.query.business_listing_id}/${Date.now()}-${req.file.originalname} ${extension}`;
+    const fileKey = `uploads/business-listings/${req.query.business_listing_id}/${Date.now()}- ${originalName}${extension}`;
     const compressedImageBuffer = await sharp(originalFileBuffer)
         .resize(400, 400, {
             width: 350,        // between 250–400
