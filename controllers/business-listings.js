@@ -1,5 +1,8 @@
+const sharp = require("sharp");
 const pool = require("../db");
 const { deleteFileFromS3 } = require("../s3/upload");
+const { PutObjectCommand } = require("@aws-sdk/client-s3");
+const s3 = require("../s3");
 
 exports.getBusinessListings = async (req, res) => {
     try {
@@ -267,3 +270,143 @@ exports.updateBusinessListing = async (req, res) => {
     }
 }
 
+
+exports.getBusinessListingsSubCategories = async (req, res) => {
+    try {
+        const { category_id } = req.params;
+        const { rows } = await pool.query('SELECT id, name FROM categories WHERE parent_id = $1', [category_id]);
+        res.status(200).json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        console.error("GET /api/v1/business-listings/subcategories error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
+
+
+exports.uploadBusinessListingLogo = async (req, res) => {
+    console.log(req.file, " req")
+    // const url = req.file.location;
+    const originalFileBuffer = req.file.buffer;
+
+    const fileKey = `uploads/business-listings/${req.query.business_listing_id}/${Date.now()}-${req.file.originalname}`;
+    const compressedImageBuffer = await sharp(originalFileBuffer)
+        .resize(400, 400, {
+            fit: sharp.fit.inside,
+            withoutEnlargement: true
+        })
+        .jpeg({ quality: 15 }) // Compress as JPEG with 80% quality
+        .toBuffer();
+
+    const params = {
+        Bucket: process.env.BUCKET_NAME,
+        Key: fileKey,
+        Body: compressedImageBuffer,
+        ContentType: 'image/jpeg', // Must match the format you compressed to
+        // ACL: 'public-read' // Optional: Makes the file publicly accessible
+    };
+
+    // Upload to S3
+    const data = await s3.send(new PutObjectCommand(params));
+    console.log('Upload successful:', data.Location);
+    const url = data.Location;
+    console.log(data, 'response data aws ')
+
+    const staticUrl = `https://${process.env.BUCKET_NAME}.s3.${process.env.REGION}.amazonaws.com/${fileKey}`;
+    console.log(staticUrl, 'staticUrl')
+
+    // update the business listing with the new image url
+    const query = `
+        UPDATE business_listings 
+        SET logo = $1 
+        WHERE id = $2
+        RETURNING *
+    `;
+    console.log(query)
+
+
+    const { rows: businessListing } = await pool.query(
+        "SELECT logo FROM business_listings WHERE id=$1",
+        [req.query.business_listing_id]
+    );
+
+    if (businessListing[0].logo) {
+        const deletePreviousFile = await deleteFileFromS3(businessListing[0].logo);
+    }
+
+
+
+
+    const { rows } = await pool.query(query, [staticUrl, req.query.business_listing_id]);
+
+    res.json({
+        message: "File uploaded successfully",
+        fileUrl: staticUrl, // S3 URL
+        data: rows[0]
+    });
+}
+
+
+exports.getBusinessListingDetails = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Optional: validate id
+        if (isNaN(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid business listing ID"
+            });
+        }
+
+        const query = `
+            SELECT * 
+            FROM business_listings 
+            WHERE id = $1
+            LIMIT 1
+        `;
+
+        const { rows } = await pool.query(query, [id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Business listing not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: rows[0]
+        });
+
+    } catch (error) {
+        console.error("GET /api/v1/business-listings/:id error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
+
+
+exports.getBusinessListingsCategories = async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT id, name FROM categories where parent_id is null');
+        res.status(200).json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        console.error("GET /api/v1/business-listings/categories error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
