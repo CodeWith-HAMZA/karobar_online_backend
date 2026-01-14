@@ -303,7 +303,7 @@ exports.uploadBusinessListingLogo = async (req, res) => {
             width: 350,        // between 250–400
             withoutEnlargement: true
         })
-        .jpeg({ quality: 10 })
+        .jpeg({ quality: 20 })
         .toBuffer();
 
     const params = {
